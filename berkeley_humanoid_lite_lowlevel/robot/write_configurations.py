@@ -5,17 +5,19 @@ import time
 
 import berkeley_humanoid_lite_lowlevel.recoil as recoil
 
-from robot import ROBOT
+from robot import Robot
 
 
 robot_configuration = json.load(open("robot_configuration.json"))
+
+robot = Robot(enable_arms=True, enable_legs=True)
 
 delay_t = 0.1
 
 store_to_flash = True
 
 
-for entry in ROBOT.joints:
+for entry in robot.joints:
     joint_name, joint = entry
     print(f"Pinging {joint_name} ... ", end="\t")
     result = joint.ping()
@@ -27,7 +29,7 @@ for entry in ROBOT.joints:
     time.sleep(0.1)
 
 
-for entry in ROBOT.joints:
+for entry in robot.joints:
     joint_name, joint = entry
 
     print(f"Writing configuration for {joint_name}")
@@ -161,4 +163,4 @@ for entry in ROBOT.joints:
     time.sleep(0.5)
 
 
-ROBOT.stop()
+robot.stop()

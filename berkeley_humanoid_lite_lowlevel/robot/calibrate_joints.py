@@ -14,11 +14,11 @@ import threading
 import numpy as np
 import yaml
 
-from robot import ROBOT
+from robot import Robot
 
 
 stopped = threading.Event()
-
+robot = Robot(enable_legs=True)
 
 def joystick_thread():
     global stopped
@@ -70,11 +70,11 @@ ideal_values = np.array([
 
 
 print("initial readings:")
-limit_readings = np.array([joint[1].read_position_measured() for joint in ROBOT.joints]) * joint_axis_directions
+limit_readings = np.array([joint[1].read_position_measured() for joint in robot.joints]) * joint_axis_directions
 print([f"{reading:.2f}" for reading in limit_readings])
 
 while not stopped.is_set():
-    joint_readings = np.array([joint[1].read_position_measured() for joint in ROBOT.joints]) * joint_axis_directions
+    joint_readings = np.array([joint[1].read_position_measured() for joint in robot.joints]) * joint_axis_directions
 
     limit_readings[0] = min(limit_readings[0], joint_readings[0])
     limit_readings[1] = max(limit_readings[1], joint_readings[1])

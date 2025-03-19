@@ -2,9 +2,9 @@ import threading
 
 from loop_rate_limiters import RateLimiter
 import numpy as np
-import recoil
 from cc.udp import UDP
 import serial
+import berkeley_humanoid_lite_lowlevel.recoil as recoil
 
 
 # configure float print precision

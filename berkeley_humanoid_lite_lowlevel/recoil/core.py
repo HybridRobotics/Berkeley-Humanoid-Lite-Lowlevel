@@ -26,10 +26,10 @@ class Function:
 class Mode:
     # these are three safe modes
     DISABLED                        = 0x00
-    IDLE                            = 0x01
+    IDLE                            = 0x01  # operational
 
     # these are special modes
-    DAMPING                         = 0x02
+    DAMPING                         = 0x02  # stopped
     CALIBRATION                     = 0x05
 
     # these are closed-loop modes
@@ -43,7 +43,7 @@ class Mode:
     VALPHABETA_OVERRIDE             = 0x21
     VQD_OVERRIDE                    = 0x22
 
-    DEBUG                           = 0x80
+    DEBUG                           = 0x80  # pre-operational
 
 
 class ErrorCode:

@@ -1,9 +1,11 @@
 # Copyright (c) 2025, The Berkeley Humanoid Lite Project Developers.
 
-from robot import ROBOT
+from robot import Robot
 
 
-ROBOT.check_connection()
+robot = Robot(enable_arms=True, enable_legs=True)
 
-ROBOT.stop()
+robot.check_connection()
+
+robot.stop()
 

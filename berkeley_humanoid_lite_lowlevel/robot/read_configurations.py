@@ -5,15 +5,15 @@ import time
 
 import berkeley_humanoid_lite_lowlevel.recoil as recoil
 
-from robot import ROBOT
+from robot import Robot
 
 
 robot_configuration = {}
 
+robot = Robot(enable_arms=True, enable_legs=True)
+robot.check_connection()
 
-ROBOT.check_connection()
-
-for entry in ROBOT.joints:
+for entry in robot.joints:
     joint_name, joint = entry
 
     print(f"Reading configuration for {joint_name}")
@@ -68,6 +68,6 @@ for entry in ROBOT.joints:
 with open("robot_configuration.json", "w") as f:
     json.dump(robot_configuration, f, indent=4)
 
-ROBOT.stop()
+robot.stop()
 
 print("Done")
