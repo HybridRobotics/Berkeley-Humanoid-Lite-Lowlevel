@@ -112,7 +112,7 @@ void loop() {
   float force_left = left_scale.get_units();
   float force_right = right_scale.get_units();
   float distance = 0.050;
-  float torque = -(force_left + force_right) * distance;
+  float torque = (force_left + force_right) * distance;
 
   torque_average = filter_alpha * torque + (1 - filter_alpha) * torque_average;
 
