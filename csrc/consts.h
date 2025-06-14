@@ -11,13 +11,13 @@
 #define VISUALIZE_PORT  10002
 #define JOYSTICK_PORT  10011
 
-#define N_JOINTS            22
+#define N_JOINTS            12
 
 
-#define POLICY_CONFIG_PATH          "configs/policy_baseline.yaml"
+#define POLICY_CONFIG_PATH          "configs/policy_biped.yaml"
 
 
-#define DEBUG_DISABLE_TRANSPORTS     1
+#define DEBUG_DISABLE_TRANSPORTS     0
 #define DEBUG_FREQUENCY_LOGGING      0
 #define DEBUG_JOINT_DATA_LOGGING     0
 
@@ -29,7 +29,7 @@
 #define NANOSECOND_PER_SECOND       1000000000
 
 
-#define IMU_PATH      "/dev/serial/by-path/pci-0000:00:14.0-usb-0:4.1:1.0"
+#define IMU_PATH      "/dev/serial/by-path/pci-0000:00:14.0-usb-0:4:1.0"
 #define IMU_BAUDRATE  B1000000
 
 #define N_DOF     12   //24
