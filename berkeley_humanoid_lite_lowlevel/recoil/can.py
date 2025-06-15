@@ -81,7 +81,7 @@ class CANTransport(Transport):
                 return None
 
             if msg.is_error_frame:
-                print("<CANReceive> WARNING: received Error Frame")
+                # print("<CANReceive> WARNING: received Error Frame")
                 continue
             
             frame = CANFrame(

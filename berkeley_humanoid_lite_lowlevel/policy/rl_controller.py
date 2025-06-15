@@ -156,10 +156,10 @@ class RlController:
         robot_mode = robot_observations[7 + self.cfg.num_actions * 2]
         command_velocity = robot_observations[7 + self.cfg.num_actions * 2 + 1:7 + self.cfg.num_actions * 2 + 4]
 
-        # Skip if not in RL running mode
-        if robot_mode != 3:
-            print(f"Mode is not 3, skipping: {robot_mode}")
-            return None
+        # # Skip if not in RL running mode
+        # if robot_mode != 3:
+        #     print(f"Mode is not 3, skipping: {robot_mode}")
+        #     return None
 
         # Process observations
         base_ang_vel = robot_base_ang_vel

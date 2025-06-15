@@ -69,7 +69,7 @@ class Se2Gamepad:
     def stop(self) -> None:
         print("Gamepad stopping...")
         self._stopped.set()
-        self._run_forever_thread.join()
+        # self._run_forever_thread.join()
 
     def run(self) -> None:
         self._run_forever_thread = threading.Thread(target=self.run_forever)
