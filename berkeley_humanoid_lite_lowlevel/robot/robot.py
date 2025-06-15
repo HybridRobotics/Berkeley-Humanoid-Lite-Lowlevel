@@ -186,7 +186,10 @@ class Robot:
         velocity_commands = self.lowlevel_states[32:35]
 
         imu_quaternion[:] = self.imu.quaternion[:]
-        imu_angular_velocity[:] = self.imu.angular_velocity[:]
+
+        # IMU returns angular velocity in deg/s, we need rad/s
+        imu_angular_velocity[:] = np.deg2rad(self.imu.angular_velocity[:])
+
         joint_positions[:] = self.joint_position_measured[:]
         joint_velocities[:] = self.joint_velocity_measured[:]
 
@@ -263,7 +266,7 @@ class Robot:
             case State.RL_INIT:
                 print(f"init: {self.init_percentage:.2f}")
                 if self.init_percentage < 1.0:
-                    self.init_percentage += 1 / 200.0
+                    self.init_percentage += 1 / 100.0
                     self.init_percentage = min(self.init_percentage, 1.0)
                     
                     for i in range(len(self.joints)):
