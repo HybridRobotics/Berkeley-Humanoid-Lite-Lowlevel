@@ -56,7 +56,7 @@ class Cfg(DictConfig):
         parser.add_argument(
             "--config",
             type=str,
-            default="./configs/policy_rsx.yaml",
+            default="./configs/policy_biped.yaml",
             help="Path to the configuration file",
         )
         args = parser.parse_args()

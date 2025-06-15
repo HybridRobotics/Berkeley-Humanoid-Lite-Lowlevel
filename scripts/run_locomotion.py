@@ -10,30 +10,13 @@ from loop_rate_limiters import RateLimiter
 
 from berkeley_humanoid_lite_lowlevel.robot import ROBOT
 from berkeley_humanoid_lite_lowlevel.policy.rl_controller import RlController
-
-
-def parse_arguments() -> Union[DictConfig, ListConfig]:
-    """
-    Parse command line arguments and load configuration file.
-
-    Returns:
-        Union[DictConfig, ListConfig]: Loaded configuration object
-    """
-    parser = argparse.ArgumentParser(description="Policy Runner for Berkeley Humanoid Lite")
-    parser.add_argument("--config", type=str, default="./configs/policy_humanoid.yaml",
-                       help="Path to the configuration file")
-    args = parser.parse_args()
-
-    print("Loading config file from ", args.config)
-
-    with open(args.config, "r") as f:
-        cfg = OmegaConf.load(f)
-
-    return cfg
+from berkeley_humanoid_lite_lowlevel.policy.config import Cfg
 
 
 # Load configuration
-cfg = parse_arguments()
+cfg = Cfg.from_arguments()
+
+print(f"Policy frequency: {1 / cfg.policy_dt} Hz")
 
 udp = UDP(("0.0.0.0", 11000), ("172.28.0.5", 11000))
 
@@ -43,7 +26,7 @@ controller = RlController(cfg)
 controller.load_policy()
 
 
-rate = RateLimiter(100)
+rate = RateLimiter(1 / cfg.policy_dt)
 
 ROBOT.run()
 
