@@ -195,9 +195,12 @@ class Se2Gamepad:
 
 if __name__ == "__main__":
     command_controller = Se2Gamepad()
+    command_controller.run()
 
     try:
-        command_controller.run()
+        while True:
+            print(f"""{command_controller.commands.get("velocity_x"):.2f}, {command_controller.commands.get("velocity_y"):.2f}, {command_controller.commands.get("velocity_yaw"):.2f}""")
+            pass
     except KeyboardInterrupt:
         print("Keyboard interrupt")
 
