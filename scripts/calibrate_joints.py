@@ -7,38 +7,11 @@ Run this script after each power cycle to calibrate the encoder offset of each j
 """
 
 import time
-import socket
-import struct
-import threading
 
 import numpy as np
 import yaml
 
-from robot import ROBOT
-
-
-stopped = threading.Event()
-
-
-def joystick_thread():
-    global stopped
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_address = ("", 10011)  # Empty string means listen on all available interfaces
-    sock.bind(server_address)
-
-    while not stopped.is_set():
-        data, _ = sock.recvfrom(1024)
-    
-        command_mode, _, _, _ = struct.unpack("<Bfff", data)
-
-        if command_mode == 1:
-            print("stopped received from joystick")
-            stopped.set()
-
-
-joystick_t = threading.Thread(target=joystick_thread)
-joystick_t.start()
-
+from berkeley_humanoid_lite_lowlevel.robot import ROBOT
 
 
 joint_axis_directions = np.array([
@@ -49,7 +22,6 @@ joint_axis_directions = np.array([
      1,
      1, 1
 ])
-
 
 
 ideal_values = np.array([
@@ -73,7 +45,7 @@ print("initial readings:")
 limit_readings = np.array([joint[1].read_position_measured() for joint in ROBOT.joints]) * joint_axis_directions
 print([f"{reading:.2f}" for reading in limit_readings])
 
-while not stopped.is_set():
+while ROBOT.command_controller.commands.get("mode_switch") != 1:
     joint_readings = np.array([joint[1].read_position_measured() for joint in ROBOT.joints]) * joint_axis_directions
 
     limit_readings[0] = min(limit_readings[0], joint_readings[0])
@@ -102,11 +74,6 @@ print([f"{limit:.4f}" for limit in limit_readings])
 print("offsets:")
 print([f"{offset:.4f}" for offset in (limit_readings - ideal_values)])
 
-print("formatted:")
-print(f"""float joint_offsets[N_JOINTS] = {{
-    {", ".join([f"{offset:.4f}" for offset in (limit_readings - ideal_values)])}
-}};""")
-
 calibration_data = {
     "position_offsets": [float(offset) for offset in (limit_readings - ideal_values)],
 }
@@ -114,4 +81,4 @@ calibration_data = {
 with open("calibration.yaml", "w") as f:
     yaml.dump(calibration_data, f)
 
-
+ROBOT.stop()

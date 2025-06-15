@@ -283,7 +283,8 @@ class SerialImu:
         """
         Start the IMU reading loop in a separate thread with high priority.
         """
-        self.thread = threading.Thread(target=self.run, daemon=True)
+        # self.thread = threading.Thread(target=self.run, daemon=True)
+        self.thread = threading.Thread(target=self.run)
         self.thread.start()
         
         # Set thread priority to high

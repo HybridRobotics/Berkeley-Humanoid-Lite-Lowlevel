@@ -1,14 +1,10 @@
-# Copyright (c) 2025, The Berkeley Humanoid Lite Project Developers.
 
 import argparse
 from typing import Union
 
 import numpy as np
-from cc.udp import UDP
 from omegaconf import DictConfig, ListConfig, OmegaConf
-from loop_rate_limiters import RateLimiter
 
-from berkeley_humanoid_lite_lowlevel.robot import ROBOT
 from berkeley_humanoid_lite_lowlevel.policy.rl_controller import RlController
 
 
@@ -35,29 +31,11 @@ def parse_arguments() -> Union[DictConfig, ListConfig]:
 # Load configuration
 cfg = parse_arguments()
 
-udp = UDP(("0.0.0.0", 11000), ("172.28.0.5", 11000))
-
 
 # Initialize and start policy controller
 controller = RlController(cfg)
 controller.load_policy()
 
+obs = np.zeros((63,), dtype=np.float32)  # Example observation, adjust as needed
 
-rate = RateLimiter(100)
-
-ROBOT.run()
-
-obs = ROBOT.reset()
-
-try:
-    while True:
-        actions = controller.update(obs)
-        obs = ROBOT.step(actions)
-        udp.send_numpy(obs)
-
-        rate.sleep()
-
-except KeyboardInterrupt:
-    ROBOT.stop()
-
-print("Stopped.")
+actions = controller.update(obs)

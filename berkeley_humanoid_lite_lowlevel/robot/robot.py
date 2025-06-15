@@ -2,16 +2,19 @@
 
 import time
 
+from omegaconf import DictConfig, ListConfig, OmegaConf
 import numpy as np
 
 import berkeley_humanoid_lite_lowlevel.recoil as recoil
 from berkeley_humanoid_lite_lowlevel.robot.imu import SerialImu, Baudrate
+from berkeley_humanoid_lite_lowlevel.policy.gamepad import Se2Gamepad
 
 
 class State:
-    IDLE = 0
-    RL_INIT = 1
-    RL_RUNNING = 2
+    INVALID = 0
+    IDLE = 1
+    RL_INIT = 2
+    RL_RUNNING = 3
 
 
 def linear_interpolate(start: float, end: float, percentage: float) -> float:
@@ -65,6 +68,10 @@ class Robot:
         self.imu = SerialImu(baudrate=Baudrate.BAUD_460800)
         self.imu.run_forever()
 
+        # Start joystick thread
+        self.command_controller = Se2Gamepad()
+        self.command_controller.run()
+
         self.state = State.IDLE
         self.next_state = State.IDLE
 
@@ -96,14 +103,6 @@ class Robot:
             0.0, 0.0
         ], dtype=np.float32)
 
-        # Initialize buffers
-        # observations:
-        # [0:4]: imu quaternion (w, x, y, z)
-        # [4:7]: imu angular velocity (rx, ry, rz)
-        # [7:19]: joint positions
-        # [19:31]: joint velocities
-        # [31:32]: mode
-        # [32:35]: velocity commands
         self.n_lowlevel_states = 4 + 3 + 12 + 12 + 1 + 3
         self.lowlevel_states = np.zeros(self.n_lowlevel_states, dtype=np.float32)
 
@@ -111,16 +110,57 @@ class Robot:
         self.joint_position_target = np.zeros(len(self.joints), dtype=np.float32)
         self.joint_position_measured = np.zeros(len(self.joints), dtype=np.float32)
         self.joint_velocity_measured = np.zeros(len(self.joints), dtype=np.float32)
-        
-    def stop(self):
 
-        self.imu.stop()
+        # used for RL initialization controller
+        self.init_percentage = 0.0
+        self.starting_positions = np.zeros_like(self.joint_position_target, dtype=np.float32)
+
+        config_path = "calibration.yaml"
+        with open(config_path, "r") as f:
+            config = OmegaConf.load(f)
+        position_offsets = np.array(config.get("position_offsets", None))
+        assert position_offsets.shape[0] == len(self.joints)
+        self.position_offsets[:] = position_offsets
         
-        for joint in self.joints:
+
+    def run(self):
+        self.joint_kp = np.zeros((len(self.joints),), dtype=np.float32)
+        self.joint_kd = np.zeros((len(self.joints),), dtype=np.float32)
+        self.torque_limit = np.zeros((len(self.joints),), dtype=np.float32)
+
+        self.joint_kp[:] = 20
+        self.joint_kd[:] = 2
+        self.torque_limit[:] = 1
+
+        for i, entry in enumerate(self.joints):
+            joint_name, joint = entry
+
+            print(f"Initializing joint {joint_name}:")
+            print(f"  kp: {self.joint_kp[i]}, kd: {self.joint_kd[i]}, torque limit: {self.torque_limit[i]}")
+
+            # Set the joint mode to idle
+            joint.set_mode(recoil.Mode.IDLE)
+            time.sleep(0.001)
+            joint.write_position_kp(self.joint_kp[i])
+            time.sleep(0.001)
+            joint.write_position_kd(self.joint_kd[i])
+            time.sleep(0.001)
+            joint.write_torque_limit(self.torque_limit[i])
+            time.sleep(0.001)
+            joint.feed()
+            joint.set_mode(recoil.Mode.DAMPING)
+
+        print("Motors enabled")
+            
+    def stop(self):
+        self.imu.stop()
+        self.command_controller.stop()
+        
+        for entry in self.joints:
+            _, joint = entry
             joint.set_mode(recoil.Mode.DAMPING)
         
         print("Entered damping mode. Press Ctrl+C again to exit.\n")
-
 
         try:
             while True:
@@ -128,14 +168,14 @@ class Robot:
         except KeyboardInterrupt:
             print("Exiting damping mode.")
 
-        for joint in self.joints:
+        for entry in self.joints:
+            _, joint = entry
             joint.set_mode(recoil.Mode.IDLE)
 
         # self.left_arm_transport.stop()
         # self.right_arm_transport.stop()
         self.left_leg_transport.stop()
         self.right_leg_transport.stop()
-
 
     def get_observations(self) -> np.ndarray:
         imu_quaternion = self.lowlevel_states[0:4]
@@ -149,8 +189,14 @@ class Robot:
         imu_angular_velocity[:] = self.imu.angular_velocity[:]
         joint_positions[:] = self.joint_position_measured[:]
         joint_velocities[:] = self.joint_velocity_measured[:]
-        mode[0] = 0.0
-        velocity_commands[:] = 0.0
+
+        mode[0] = self.command_controller.commands["mode_switch"]
+        velocity_commands[0] = self.command_controller.commands["velocity_x"]
+        velocity_commands[1] = self.command_controller.commands["velocity_y"]
+        velocity_commands[2] = self.command_controller.commands["velocity_yaw"]
+        
+        self.next_state = self.command_controller.commands["mode_switch"]
+
         return self.lowlevel_states
 
     def update_joints(self):
@@ -168,6 +214,10 @@ class Robot:
             self.joint_position_measured[i] = (position_measured * self.joint_axis_directions[i]) - self.position_offsets[i]
             self.joint_velocity_measured[i] = velocity_measured * self.joint_axis_directions[i]
 
+    def reset(self):
+        obs = self.get_observations()
+        return obs
+
     def step(self, actions: np.ndarray):
         """
         actions: np.ndarray of shape (n_joints, )
@@ -180,20 +230,22 @@ class Robot:
                     print("Switching to RL initialization mode")
                     self.state = self.next_state
 
-                    for joint in self.joints:
+                    for entry in self.joints:
+                        _, joint = entry
                         joint.feed()
                         joint.set_mode(recoil.Mode.POSITION)
-                    
-                    starting_positions = self.joint_position_target[:]
-                    init_percentage = 0.0
+
+                    self.starting_positions = self.joint_position_target[:]
+                    self.init_percentage = 0.0
 
             case State.RL_INIT:
-                if init_percentage < 1.0:
-                    init_percentage += 1 / 200.0
-                    init_percentage = min(init_percentage, 1.0)
+                print(f"init: {self.init_percentage:.2f}")
+                if self.init_percentage < 1.0:
+                    self.init_percentage += 1 / 200.0
+                    self.init_percentage = min(self.init_percentage, 1.0)
                     
                     for i in range(len(self.joints)):
-                        self.joint_position_target[i] = linear_interpolate(starting_positions[i], self.rl_init_positions[i], init_percentage)
+                        self.joint_position_target[i] = linear_interpolate(self.starting_positions[i], self.rl_init_positions[i], self.init_percentage)
                 else:
                     if self.next_state == State.RL_RUNNING:
                         print("Switching to RL running mode")
@@ -203,23 +255,22 @@ class Robot:
                         print("Switching to idle mode")
                         self.state = self.next_state
 
-                        for joint in self.joints:
+                        for entry in self.joints:
+                            _, joint = entry
                             joint.set_mode(recoil.Mode.DAMPING)
 
             case State.RL_RUNNING:
-                # for (int i = 0; i < N_JOINTS; i += 1) {
-                #     position_target[i] = lowlevel_commands[i];
-                # }
-                # if (next_state == STATE_IDLE) {
-                #     printf("Switching to idle mode\n");
-                #     state = next_state;
+                for i in range(len(self.joints)):
+                    self.joint_position_target[i] = actions[i]
+                
+                if self.next_state == State.IDLE:
+                    print("Switching to idle mode")
+                    self.state = self.next_state
 
-                #     for (int i = 0; i < N_JOINTS; i += 1) {
-                #         usleep(5);
-                #         joint_ptrs[i]->set_mode(MODE_DAMPING);
-                #     }
-                # }
-                pass
+                    for entry in self.joints:
+                        _, joint = entry
+                        joint.feed()
+                        joint.set_mode(recoil.Mode.DAMPING)
 
         self.update_joints()
 
