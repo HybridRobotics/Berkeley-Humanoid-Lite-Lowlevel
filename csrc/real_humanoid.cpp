@@ -379,48 +379,48 @@ void RealHumanoid::initialize() {
   ssize_t status;
 
   #if DEBUG_DISABLE_TRANSPORTS == 0
-    // left arm
-    left_arm_bus.open("can0");
-    if (!left_arm_bus.isOpen()) {
-      printf("[ERROR] <Main>: Error initializing left arm transport\n");
-      exit(1);
-    }
+    // // left arm
+    // left_arm_bus.open("can0");
+    // if (!left_arm_bus.isOpen()) {
+    //   printf("[ERROR] <Main>: Error initializing left arm transport\n");
+    //   exit(1);
+    // }
 
-    // right arm
-    right_arm_bus.open("can1");
-    if (!right_arm_bus.isOpen()) {
-      printf("[ERROR] <Main>: Error initializing right arm transport\n");
-      exit(1);
-    }
+    // // right arm
+    // right_arm_bus.open("can1");
+    // if (!right_arm_bus.isOpen()) {
+    //   printf("[ERROR] <Main>: Error initializing right arm transport\n");
+    //   exit(1);
+    // }
 
     // left leg
-    left_leg_bus.open("can3");
+    left_leg_bus.open("can0");
     if (!left_leg_bus.isOpen()) {
       printf("[ERROR] <Main>: Error initializing left leg transport\n");
       exit(1);
     }
 
     // right leg
-    right_leg_bus.open("can2");
+    right_leg_bus.open("can1");
     if (!right_leg_bus.isOpen()) {
       printf("[ERROR] <Main>: Error initializing right arm transport\n");
       exit(1);
     }
   #endif
 
-  // left arm
-  joint_ptrs[ARM_LEFT_SHOULDER_PITCH_JOINT] = std::make_shared<MotorController>(&left_arm_bus, 1);
-  joint_ptrs[ARM_LEFT_SHOULDER_ROLL_JOINT] = std::make_shared<MotorController>(&left_arm_bus, 3);
-  joint_ptrs[ARM_LEFT_SHOULDER_YAW_JOINT] = std::make_shared<MotorController>(&left_arm_bus, 5);
-  joint_ptrs[ARM_LEFT_ELBOW_PITCH_JOINT] = std::make_shared<MotorController>(&left_arm_bus, 7);
-  joint_ptrs[ARM_LEFT_ELBOW_ROLL_JOINT] = std::make_shared<MotorController>(&left_arm_bus, 9);
+  // // left arm
+  // joint_ptrs[ARM_LEFT_SHOULDER_PITCH_JOINT] = std::make_shared<MotorController>(&left_arm_bus, 1);
+  // joint_ptrs[ARM_LEFT_SHOULDER_ROLL_JOINT] = std::make_shared<MotorController>(&left_arm_bus, 3);
+  // joint_ptrs[ARM_LEFT_SHOULDER_YAW_JOINT] = std::make_shared<MotorController>(&left_arm_bus, 5);
+  // joint_ptrs[ARM_LEFT_ELBOW_PITCH_JOINT] = std::make_shared<MotorController>(&left_arm_bus, 7);
+  // joint_ptrs[ARM_LEFT_ELBOW_ROLL_JOINT] = std::make_shared<MotorController>(&left_arm_bus, 9);
 
-  // right arm
-  joint_ptrs[ARM_RIGHT_SHOULDER_PITCH_JOINT] = std::make_shared<MotorController>(&right_arm_bus, 2);
-  joint_ptrs[ARM_RIGHT_SHOULDER_ROLL_JOINT] = std::make_shared<MotorController>(&right_arm_bus, 4);
-  joint_ptrs[ARM_RIGHT_SHOULDER_YAW_JOINT] = std::make_shared<MotorController>(&right_arm_bus, 6);
-  joint_ptrs[ARM_RIGHT_ELBOW_PITCH_JOINT] = std::make_shared<MotorController>(&right_arm_bus, 8);
-  joint_ptrs[ARM_RIGHT_ELBOW_ROLL_JOINT] = std::make_shared<MotorController>(&right_arm_bus, 10);
+  // // right arm
+  // joint_ptrs[ARM_RIGHT_SHOULDER_PITCH_JOINT] = std::make_shared<MotorController>(&right_arm_bus, 2);
+  // joint_ptrs[ARM_RIGHT_SHOULDER_ROLL_JOINT] = std::make_shared<MotorController>(&right_arm_bus, 4);
+  // joint_ptrs[ARM_RIGHT_SHOULDER_YAW_JOINT] = std::make_shared<MotorController>(&right_arm_bus, 6);
+  // joint_ptrs[ARM_RIGHT_ELBOW_PITCH_JOINT] = std::make_shared<MotorController>(&right_arm_bus, 8);
+  // joint_ptrs[ARM_RIGHT_ELBOW_ROLL_JOINT] = std::make_shared<MotorController>(&right_arm_bus, 10);
 
   // left leg
   joint_ptrs[LEG_LEFT_HIP_ROLL_JOINT] = std::make_shared<MotorController>(&left_leg_bus, 1);
