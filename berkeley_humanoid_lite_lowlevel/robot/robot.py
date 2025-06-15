@@ -200,19 +200,41 @@ class Robot:
         return self.lowlevel_states
 
     def update_joints(self):
+        position_target = np.zeros_like(self.joint_position_measured, dtype=np.float32)
+        # velocity_target = np.zeros_like(self.joint_velocity_measured, dtype=np.float32)
+        position_measured = np.zeros_like(self.joint_position_measured, dtype=np.float32)
+        velocity_measured = np.zeros_like(self.joint_velocity_measured, dtype=np.float32)
+
         for i, entry in enumerate(self.joints):
-            joint_name, joint = entry
-
+            _, joint = entry
             # adjust direction and offset of target values
-            position_target = (self.joint_position_target[i] + self.position_offsets[i]) * self.joint_axis_directions[i]
-            velocity_target = self.joint_velocity_target[i] * self.joint_axis_directions[i]
+            position_target[i] = (self.joint_position_target[i] + self.position_offsets[i]) * self.joint_axis_directions[i]
+            # velocity_target = self.joint_velocity_target[i] * self.joint_axis_directions[i]
 
-            # communicate with actuators
-            position_measured, velocity_measured = joint.write_pdo_2(position_target=position_target, velocity_target=0.0)
+        # communicate with actuators
+        position_measured[0], velocity_measured[0] = self.joints[0][1].write_pdo_2(position_target=position_target[0], velocity_target=0.0)
+        position_measured[6], velocity_measured[6] = self.joints[6][1].write_pdo_2(position_target=position_target[6], velocity_target=0.0)
 
+        position_measured[1], velocity_measured[1] = self.joints[1][1].write_pdo_2(position_target=position_target[1], velocity_target=0.0)
+        position_measured[7], velocity_measured[7] = self.joints[7][1].write_pdo_2(position_target=position_target[7], velocity_target=0.0)
+
+        position_measured[2], velocity_measured[2] = self.joints[2][1].write_pdo_2(position_target=position_target[2], velocity_target=0.0)
+        position_measured[8], velocity_measured[8] = self.joints[8][1].write_pdo_2(position_target=position_target[8], velocity_target=0.0)
+
+        position_measured[3], velocity_measured[3] = self.joints[3][1].write_pdo_2(position_target=position_target[3], velocity_target=0.0)
+        position_measured[9], velocity_measured[9] = self.joints[9][1].write_pdo_2(position_target=position_target[9], velocity_target=0.0)
+
+        position_measured[4], velocity_measured[4] = self.joints[4][1].write_pdo_2(position_target=position_target[4], velocity_target=0.0)
+        position_measured[10], velocity_measured[10] = self.joints[10][1].write_pdo_2(position_target=position_target[10], velocity_target=0.0)
+
+        position_measured[5], velocity_measured[5] = self.joints[5][1].write_pdo_2(position_target=position_target[5], velocity_target=0.0)
+        position_measured[11], velocity_measured[11] = self.joints[11][1].write_pdo_2(position_target=position_target[11], velocity_target=0.0)
+
+        for i, entry in enumerate(self.joints):
+            _, joint = entry
             # adjust direction and offset of measured values
-            self.joint_position_measured[i] = (position_measured * self.joint_axis_directions[i]) - self.position_offsets[i]
-            self.joint_velocity_measured[i] = velocity_measured * self.joint_axis_directions[i]
+            self.joint_position_measured[i] = (position_measured[i] * self.joint_axis_directions[i]) - self.position_offsets[i]
+            self.joint_velocity_measured[i] = velocity_measured[i] * self.joint_axis_directions[i]
 
     def reset(self):
         obs = self.get_observations()
