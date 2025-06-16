@@ -42,11 +42,11 @@ ideal_values = np.array([
 
 
 print("initial readings:")
-limit_readings = np.array([joint[1].read_position_measured() for joint in ROBOT.joints]) * joint_axis_directions
+limit_readings = np.array([joint[0].read_position_measured(joint[1]) for joint in ROBOT.joints]) * joint_axis_directions
 print([f"{reading:.2f}" for reading in limit_readings])
 
 while ROBOT.command_controller.commands.get("mode_switch") != 1:
-    joint_readings = np.array([joint[1].read_position_measured() for joint in ROBOT.joints]) * joint_axis_directions
+    joint_readings = np.array([joint[0].read_position_measured(joint[1]) for joint in ROBOT.joints]) * joint_axis_directions
 
     limit_readings[0] = min(limit_readings[0], joint_readings[0])
     limit_readings[1] = max(limit_readings[1], joint_readings[1])
