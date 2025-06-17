@@ -11,16 +11,18 @@ import time
 import numpy as np
 import yaml
 
-from berkeley_humanoid_lite_lowlevel.robot import ROBOT
+from berkeley_humanoid_lite_lowlevel.robot.robot import Robot
 
+
+robot = Robot()
 
 joint_axis_directions = np.array([
-    -1, 1, -1,
+    -1, +1, -1,
     -1,
-    -1, 1,
-    -1, 1, 1,
-     1,
-     1, 1
+    -1, +1,
+    -1, +1, +1,
+    +1,
+    +1, +1
 ])
 
 
@@ -42,11 +44,11 @@ ideal_values = np.array([
 
 
 print("initial readings:")
-limit_readings = np.array([joint[0].read_position_measured(joint[1]) for joint in ROBOT.joints]) * joint_axis_directions
+limit_readings = np.array([joint[0].read_position_measured(joint[1]) for joint in robot.joints]) * joint_axis_directions
 print([f"{reading:.2f}" for reading in limit_readings])
 
-while ROBOT.command_controller.commands.get("mode_switch") != 1:
-    joint_readings = np.array([joint[0].read_position_measured(joint[1]) for joint in ROBOT.joints]) * joint_axis_directions
+while robot.command_controller.commands.get("mode_switch") != 1:
+    joint_readings = np.array([joint[0].read_position_measured(joint[1]) for joint in robot.joints]) * joint_axis_directions
 
     limit_readings[0] = min(limit_readings[0], joint_readings[0])
     limit_readings[1] = max(limit_readings[1], joint_readings[1])
@@ -54,7 +56,7 @@ while ROBOT.command_controller.commands.get("mode_switch") != 1:
     limit_readings[3] = min(limit_readings[3], joint_readings[3])
     limit_readings[4] = min(limit_readings[4], joint_readings[4])
     limit_readings[5] = min(limit_readings[5], joint_readings[5])
-    
+
     limit_readings[6] = max(limit_readings[6], joint_readings[6])
     limit_readings[7] = min(limit_readings[7], joint_readings[7])
     limit_readings[8] = max(limit_readings[8], joint_readings[8])
@@ -62,7 +64,6 @@ while ROBOT.command_controller.commands.get("mode_switch") != 1:
     limit_readings[10] = min(limit_readings[10], joint_readings[10])
     limit_readings[11] = max(limit_readings[11], joint_readings[11])
 
-    
     print(time.time(), [f"{reading:.2f}" for reading in limit_readings])
 
     time.sleep(0.05)
@@ -81,4 +82,4 @@ calibration_data = {
 with open("calibration.yaml", "w") as f:
     yaml.dump(calibration_data, f)
 
-ROBOT.stop()
+robot.stop()

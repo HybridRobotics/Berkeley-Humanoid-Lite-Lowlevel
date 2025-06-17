@@ -79,7 +79,6 @@ class Robot:
             -0.3, 0.0
         ], dtype=np.float32)
 
-
         self.joint_axis_directions = np.array([
             -1, 1, -1,
             -1,
@@ -116,7 +115,7 @@ class Robot:
         position_offsets = np.array(config.get("position_offsets", None))
         assert position_offsets.shape[0] == len(self.joints)
         self.position_offsets[:] = position_offsets
-        
+
 
     def run(self):
         self.joint_kp = np.zeros((len(self.joints),), dtype=np.float32)
@@ -146,15 +145,15 @@ class Robot:
             bus.set_mode(device_id, recoil.Mode.DAMPING)
 
         print("Motors enabled")
-            
+
     def stop(self):
         self.imu.stop()
         self.command_controller.stop()
-        
+
         for entry in self.joints:
             bus, device_id, _ = entry
             bus.set_mode(device_id, recoil.Mode.DAMPING)
-        
+
         print("Entered damping mode. Press Ctrl+C again to exit.\n")
 
         try:
@@ -192,7 +191,7 @@ class Robot:
         velocity_commands[0] = self.command_controller.commands["velocity_x"]
         velocity_commands[1] = self.command_controller.commands["velocity_y"]
         velocity_commands[2] = self.command_controller.commands["velocity_yaw"]
-        
+
         self.next_state = self.command_controller.commands["mode_switch"]
 
         return self.lowlevel_states
@@ -201,10 +200,10 @@ class Robot:
         # adjust direction and offset of target values
         position_target_l = (self.joint_position_target[joint_id_l] + self.position_offsets[joint_id_l]) * self.joint_axis_directions[joint_id_l]
         position_target_r = (self.joint_position_target[joint_id_r] + self.position_offsets[joint_id_r]) * self.joint_axis_directions[joint_id_r]
-        
+
         self.joints[joint_id_l][0].transmit_pdo_2(self.joints[joint_id_l][1], position_target=position_target_l, velocity_target=0.0)
         self.joints[joint_id_r][0].transmit_pdo_2(self.joints[joint_id_r][1], position_target=position_target_r, velocity_target=0.0)
-        
+
         position_measured_l, velocity_measured_l = self.joints[joint_id_l][0].receive_pdo_2(self.joints[joint_id_l][1])
         position_measured_r, velocity_measured_r = self.joints[joint_id_r][0].receive_pdo_2(self.joints[joint_id_r][1])
 
@@ -227,7 +226,7 @@ class Robot:
         self.update_joint_group(3, 9)
         self.update_joint_group(4, 10)
         self.update_joint_group(5, 11)
-        
+
     def reset(self):
         obs = self.get_observations()
         return obs
@@ -257,13 +256,13 @@ class Robot:
                 if self.init_percentage < 1.0:
                     self.init_percentage += 1 / 100.0
                     self.init_percentage = min(self.init_percentage, 1.0)
-                    
+
                     self.joint_position_target = linear_interpolate(self.starting_positions, self.rl_init_positions, self.init_percentage)
                 else:
                     if self.next_state == State.RL_RUNNING:
                         print("Switching to RL running mode")
                         self.state = self.next_state
-                    
+
                     if self.next_state == State.IDLE:
                         print("Switching to idle mode")
                         self.state = self.next_state
@@ -275,7 +274,7 @@ class Robot:
             case State.RL_RUNNING:
                 for i in range(len(self.joints)):
                     self.joint_position_target[i] = actions[i]
-                
+
                 if self.next_state == State.IDLE:
                     print("Switching to idle mode")
                     self.state = self.next_state
@@ -300,5 +299,3 @@ class Robot:
             else:
                 print("ERROR")
             time.sleep(0.1)
-
-ROBOT = Robot()

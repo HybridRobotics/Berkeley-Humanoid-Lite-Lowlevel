@@ -4,16 +4,15 @@ import berkeley_humanoid_lite_lowlevel.recoil as recoil
 
 
 args = recoil.util.get_args()
-transport = recoil.SocketCANTransport(port=args.port, baudrate=1000000)
-transport.start()
+bus = recoil.Bus(channel=args.channel, bitrate=1000000)
 
-motor = recoil.MotorController(transport, id=args.id)
+device_id = args.id
 
-status = motor.ping()
+status = bus.ping(device_id)
 
 if status:
     print("Motor is online")
 else:
     print("Motor is offline")
 
-transport.stop()
+bus.stop()

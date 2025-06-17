@@ -14,12 +14,12 @@ import berkeley_humanoid_lite_lowlevel.recoil as recoil
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-p", "--port", help="CAN port", type=str, default="can0")
+parser.add_argument("-c", "--channel", help="CAN transport channel", type=str, default="can0")
 args = parser.parse_args()
 
-transport = recoil.SocketCANTransport(port=args.port, baudrate=1000000)
-transport.start()
+bus = recoil.Bus(channel=args.port, baudrate=1000000)
 
-transport.anyone(16)
+for i in range(16):
+    bus.ping(i)
 
-transport.stop()
+bus.stop()

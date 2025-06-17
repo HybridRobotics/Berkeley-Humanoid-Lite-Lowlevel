@@ -14,7 +14,7 @@ class Fixed16:
 
     def asFloat(self):
         return self.value
-    
+
     def asBytes(self):
         int16_val = int(self.value * 256)
         return struct.pack("<h", int16_val)
@@ -23,7 +23,7 @@ class Fixed16:
     def fromBytes(data: bytes):
         int16_val, = struct.unpack("<h", data)
         return Fixed16(int16_val / 256.0)
-    
+
     @staticmethod
     def fromInt(value: int):
         return Fixed16(value / 256.0)

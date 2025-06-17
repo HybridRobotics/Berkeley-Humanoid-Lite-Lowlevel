@@ -1,12 +1,6 @@
 # Copyright (c) 2025, -T.K.-.
 
-import os
-import struct
-
-import can
-import serial
-
-from .core import DataFrame, Transport, Function
+from .core import DataFrame, Function
 
 
 class CANFrame(DataFrame):
@@ -17,12 +11,12 @@ class CANFrame(DataFrame):
     FUNC_ID_POS = 7
     FUNC_ID_MSK = 0x0F << FUNC_ID_POS
 
-    def __init__(self, 
-            device_id: int = 0, 
-            func_id: Function = None, 
-            size: int = 0, 
-            data: bytes = b""
-        ):
+    def __init__(
+        self,
+        device_id: int = 0,
+        func_id: Function | None = None,
+        size: int = 0,
+        data: bytes = b""
+    ):
         super().__init__(device_id, func_id, size, data)
         assert self.size <= 8
-

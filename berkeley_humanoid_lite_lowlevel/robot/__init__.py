@@ -1,1 +1,2 @@
-from .robot import ROBOT
+from .robot import Robot
+from .bimanual import Bimanual
