@@ -2,7 +2,7 @@
 
 import math
 import struct
-import threading
+import time
 
 import can
 
@@ -235,7 +235,7 @@ class Bus:
                 return None
 
             if msg.is_error_frame:
-                # print("<CANReceive> WARNING: received Error Frame")
+                print(f"{time.time()} <{self.channel}> Error Frame: {msg.arbitration_id}, {msg.dlc}")
                 continue
             
             frame = CANFrame(
@@ -583,7 +583,7 @@ class Bus:
         ))
 
     def receive_pdo_2(self, device_id: int) -> tuple:
-        rx_frame = self.receive(filter_device_id=device_id, timeout=1)
+        rx_frame = self.receive(filter_device_id=device_id, timeout=0.001)
 
         if rx_frame:
             measured_position, measured_velocity = struct.unpack("<ff", rx_frame.data[0:8])
