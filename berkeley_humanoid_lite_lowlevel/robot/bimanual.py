@@ -1,8 +1,9 @@
 # Copyright (c) 2025, The Berkeley Humanoid Lite Project Developers.
 
+import struct
 import time
 
-from omegaconf import OmegaConf
+import serial
 import numpy as np
 
 import berkeley_humanoid_lite_lowlevel.recoil as recoil
@@ -13,6 +14,7 @@ class Bimanual:
 
         self.left_arm_transport = recoil.Bus("can0")
         self.right_arm_transport = recoil.Bus("can1")
+        self.gripper = serial.Serial("/dev/ttyUSB0", 115200)
 
         self.joints = [
             (self.left_arm_transport, 1, "left_shoulder_pitch_joint"),
@@ -30,19 +32,23 @@ class Bimanual:
 
         self.joint_axis_directions = np.array([
             +1, +1, -1, -1, -1,
-            -1, +1, -1, +1, -1
+            -1, +1, -1, +1, -1,
+            +1, +1,  # gripper
         ], dtype=np.float32)
 
         self.position_offsets = np.array([
             0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0
+            0.0, 0.0, 0.0, 0.0, 0.0,
+            0.2, 0.2,  # gripper
         ], dtype=np.float32)
 
         self.joint_position_target = np.zeros(len(self.joints), dtype=np.float32)
         self.joint_position_measured = np.zeros(len(self.joints), dtype=np.float32)
         self.joint_velocity_measured = np.zeros(len(self.joints), dtype=np.float32)
+        self.gripper_left_target = 0.5
+        self.gripper_right_target = 0.5
 
-    def run(self, kp=20, kd=2, torque_limit=1):
+    def start(self, kp=20, kd=2, torque_limit=1):
         self.joint_kp = np.zeros((len(self.joints),), dtype=np.float32)
         self.joint_kd = np.zeros((len(self.joints),), dtype=np.float32)
         self.torque_limit = np.zeros((len(self.joints),), dtype=np.float32)
@@ -95,7 +101,10 @@ class Bimanual:
         self.right_arm_transport.stop()
 
     def get_observations(self) -> np.ndarray:
-        return self.joint_position_measured[:]
+        return np.concatenate([
+            self.joint_position_measured[:],
+            [self.gripper_left_target, self.gripper_right_target],
+        ])
 
     def update_joint_group(self, joint_id_l, joint_id_r):
         # adjust direction and offset of target values
@@ -127,6 +136,15 @@ class Bimanual:
         self.update_joint_group(3, 8)
         self.update_joint_group(4, 9)
 
+        # communicate with gripper
+        # 0.2: open
+        # 0.85: closed
+        # 0.9: tightly closed
+        gripper_left_raw_value = 0.2 + self.gripper_left_target * 0.6
+        gripper_right_raw_value = 0.2 + self.gripper_right_target * 0.6
+        data = struct.pack("<ffb", gripper_left_raw_value, gripper_right_raw_value, 0x0C)
+        self.gripper.write(data)
+
     def reset(self):
         obs = self.get_observations()
         return obs
@@ -135,7 +153,9 @@ class Bimanual:
         """
         actions: np.ndarray of shape (n_joints, )
         """
-        self.joint_position_target[:] = actions[:]
+        self.joint_position_target[:] = actions[0:10]
+        self.gripper_left_target = actions[10]
+        self.gripper_right_target = actions[11]
 
         self.update_joints()
 
