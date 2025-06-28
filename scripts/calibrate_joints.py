@@ -11,10 +11,10 @@ import time
 import numpy as np
 import yaml
 
-from berkeley_humanoid_lite_lowlevel.robot.robot import Robot
+from berkeley_humanoid_lite_lowlevel.robot import Humanoid
 
 
-robot = Robot()
+robot = Humanoid()
 
 joint_axis_directions = np.array([
     -1, +1, -1,

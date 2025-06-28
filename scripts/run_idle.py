@@ -3,10 +3,10 @@
 import numpy as np
 from cc.udp import UDP
 
-from berkeley_humanoid_lite_lowlevel.robot.robot import Robot
+from berkeley_humanoid_lite_lowlevel.robot import Humanoid
 
 
-robot = Robot()
+robot = Humanoid()
 # udp = UDP(send_addr=("172.28.0.5", 8000))
 
 udp = UDP(("0.0.0.0", 11000), ("172.28.0.5", 11000))

@@ -1,6 +1,6 @@
 # Copyright (c) 2025, -T.K.-.
 
-from .core import DataFrame, Function
+from .core import DataFrame
 
 
 class CANFrame(DataFrame):
@@ -14,7 +14,7 @@ class CANFrame(DataFrame):
     def __init__(
         self,
         device_id: int = 0,
-        func_id: Function | None = None,
+        func_id: int | None = None,
         size: int = 0,
         data: bytes = b""
     ):

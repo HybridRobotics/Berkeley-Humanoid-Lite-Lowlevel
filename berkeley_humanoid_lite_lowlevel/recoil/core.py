@@ -152,9 +152,9 @@ class DataFrame:
     def __init__(
         self,
         device_id: int = 0,
-        func_id: Function | None = None,
+        func_id: int | None = None,
         size: int = 0,
-        data: bytes = b""
+        data: bytes | bytearray = b""
     ):
         self.device_id = device_id
         self.func_id = func_id
@@ -172,12 +172,13 @@ class CANFrame(DataFrame):
     FUNC_ID_POS = 7
     FUNC_ID_MSK = 0x0F << FUNC_ID_POS
 
-    def __init__(self,
-            device_id: int = 0,
-            func_id: Function = None,
-            size: int = 0,
-            data: bytes = b""
-        ):
+    def __init__(
+        self,
+        device_id: int = 0,
+        func_id: int | None = None,
+        size: int = 0,
+        data: bytes | bytearray = b""
+    ):
         super().__init__(device_id, func_id, size, data)
         assert self.size <= 8
 
@@ -189,7 +190,7 @@ class Bus:
             return struct.unpack(format_str, data)
         except struct.error as e:
             print("warning:", e, data)
-            return []
+            return ()
 
     def __init__(self, channel: str, bitrate: int = 1000000):
         """
@@ -218,10 +219,10 @@ class Bus:
     @param timeout: timeout in seconds
     """
     def receive(self,
-                filter_device_id: int = None,
-                filter_function: Function = None,
+                filter_device_id: int | None = None,
+                filter_function: int | None = None,
                 timeout=None
-                ) -> CANFrame:
+                ) -> CANFrame | None:
         while True:
             try:
                 msg = self.__bus.recv(timeout=timeout)
@@ -240,10 +241,10 @@ class Bus:
                 continue
 
             frame = CANFrame(
-                device_id = msg.arbitration_id & CANFrame.DEVICE_ID_MSK,
-                func_id = msg.arbitration_id >> CANFrame.FUNC_ID_POS,
-                size = msg.dlc,
-                data = msg.data
+                device_id=msg.arbitration_id & CANFrame.DEVICE_ID_MSK,
+                func_id=msg.arbitration_id >> CANFrame.FUNC_ID_POS,
+                size=msg.dlc,
+                data=msg.data
             )
             if filter_device_id:
                 if frame.device_id != filter_device_id:
@@ -256,6 +257,7 @@ class Bus:
 
     def transmit(self, frame: CANFrame):
         assert frame.device_id <= CANFrame.DEVICE_ID_MSK, "device_id: {0} out of range".format(frame.device_id)
+        assert frame.func_id is not None
 
         can_id = (frame.func_id << CANFrame.FUNC_ID_POS) | frame.device_id
 
@@ -301,7 +303,7 @@ class Bus:
             data=struct.pack("<B", 1)
         ))
 
-    def _read_parameter(self, device_id: int, param_id: Parameter, timeout=None) -> bytes:
+    def _read_parameter(self, device_id: int, param_id: int, timeout=None) -> CANFrame | None:
         self.transmit(CANFrame(
             device_id,
             Function.RECEIVE_SDO,
@@ -311,7 +313,7 @@ class Bus:
         rx_frame = self.receive(filter_device_id=device_id, filter_function=Function.TRANSMIT_SDO, timeout=timeout)
         return rx_frame
 
-    def _write_parameter(self, device_id: int, param_id: Parameter, tx_data: bytes) -> None:
+    def _write_parameter(self, device_id: int, param_id: int, tx_data: bytes) -> None:
         self.transmit(CANFrame(
             device_id,
             Function.RECEIVE_SDO,
@@ -319,228 +321,226 @@ class Bus:
             data=struct.pack("<BHB", 0x01 << 5, param_id, 0) + tx_data
         ))
 
-    def _read_parameter_bytes(self, device_id: int, param_id: Parameter, timeout=None) -> bytes:
+    def _read_parameter_bytes(self, device_id: int, param_id: int, timeout=None) -> bytes | bytearray | None:
         rx_frame = self._read_parameter(device_id, param_id, timeout)
         if not rx_frame:
             return None
         rx_data = rx_frame.data[0:4]
         return rx_data
 
-    def _read_parameter_f32(self, device_id: int, param_id: Parameter, timeout=None) -> float:
+    def _read_parameter_f32(self, device_id: int, param_id: int, timeout=None) -> float | None:
         rx_frame = self._read_parameter(device_id, param_id, timeout)
         if not rx_frame:
             return None
         rx_data = self.unpack("<f", rx_frame.data[0:4])[0]
         return rx_data
 
-    def _read_parameter_i32(self, device_id: int, param_id: Parameter, timeout=None) -> int:
+    def _read_parameter_i32(self, device_id: int, param_id: int, timeout=None) -> int | None:
         rx_frame = self._read_parameter(device_id, param_id, timeout)
         if not rx_frame:
             return None
         rx_data = self.unpack("<l", rx_frame.data[0:4])[0]
         return rx_data
 
-    def _read_parameter_u32(self, device_id: int, param_id: Parameter, timeout=None) -> int:
+    def _read_parameter_u32(self, device_id: int, param_id: int, timeout=None) -> int | None:
         rx_frame = self._read_parameter(device_id, param_id, timeout)
         if not rx_frame:
             return None
         rx_data = self.unpack("<L", rx_frame.data[0:4])[0]
         return rx_data
 
-    def _write_parameter_bytes(self, device_id: int, param_id: Parameter, value: bytes):
+    def _write_parameter_bytes(self, device_id: int, param_id: int, value: bytes):
         self._write_parameter(device_id, param_id, value)
 
-    def _write_parameter_f32(self, device_id: int, param_id: Parameter, value: float):
+    def _write_parameter_f32(self, device_id: int, param_id: int, value: float):
         tx_data = struct.pack("<f", value)
         self._write_parameter(device_id, param_id, tx_data)
 
-    def _write_parameter_i32(self, device_id: int, param_id: Parameter, value: int):
-        assert type(value) == int, "value must be an integer"
+    def _write_parameter_i32(self, device_id: int, param_id: int, value: int):
+        assert isinstance(value, int), "value must be an integer"
         tx_data = struct.pack("<l", value)
         self._write_parameter(device_id, param_id, tx_data)
 
-    def _write_parameter_u32(self, device_id: int, param_id: Parameter, value: int):
-        assert type(value) == int, "value must be an integer"
+    def _write_parameter_u32(self, device_id: int, param_id: int, value: int):
+        assert isinstance(value, int), "value must be an integer"
         assert value >= 0, "value must be unsigned integer"
         tx_data = struct.pack("<L", value)
         self._write_parameter(device_id, param_id, tx_data)
 
     # Parameter fields
 
-    def read_fast_frame_frequency(self, device_id: int) -> int:
+    def read_fast_frame_frequency(self, device_id: int) -> int | None:
         return self._read_parameter_u32(device_id, Parameter.FAST_FRAME_FREQUENCY)
 
-    def write_fast_frame_frequency(self, device_id: int, value: int):
+    def write_fast_frame_frequency(self, device_id: int, value: int) -> None:
         self._write_parameter_u32(device_id, Parameter.FAST_FRAME_FREQUENCY, value)
 
-    def read_gear_ratio(self, device_id: int) -> float:
+    def read_gear_ratio(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_GEAR_RATIO)
 
     def write_gear_ratio(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_GEAR_RATIO, value)
 
-    def read_position_kp(self, device_id: int) -> float:
+    def read_position_kp(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_POSITION_KP)
 
     def write_position_kp(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_POSITION_KP, value)
 
-    def read_position_kd(self, device_id: int) -> float:
+    def read_position_kd(self, device_id: int) -> float | None:
         return self.read_velocity_kp(device_id)
 
     def write_position_kd(self, device_id: int, value: float):
         self.write_velocity_kp(device_id, value)
 
-    def read_position_ki(self, device_id: int) -> float:
+    def read_position_ki(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_POSITION_KI)
 
     def write_position_ki(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_POSITION_KI, value)
 
-    def read_velocity_kp(self, device_id: int) -> float:
+    def read_velocity_kp(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_VELOCITY_KP)
 
     def write_velocity_kp(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_VELOCITY_KP, value)
 
-    def read_velocity_ki(self, device_id: int) -> float:
+    def read_velocity_ki(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_VELOCITY_KI)
 
     def write_velocity_ki(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_VELOCITY_KI, value)
 
-    def read_torque_limit(self, device_id: int) -> float:
+    def read_torque_limit(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_TORQUE_LIMIT)
 
     def write_torque_limit(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_TORQUE_LIMIT, value)
 
-    def read_velocity_limit(self, device_id: int) -> float:
+    def read_velocity_limit(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_VELOCITY_LIMIT)
 
     def write_velocity_limit(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_VELOCITY_LIMIT, value)
 
-    def read_position_limit_lower(self, device_id: int) -> float:
+    def read_position_limit_lower(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_POSITION_LIMIT_LOWER)
 
     def write_position_limit_lower(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_POSITION_LIMIT_LOWER, value)
 
-    def read_position_limit_upper(self, device_id: int) -> float:
+    def read_position_limit_upper(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_POSITION_LIMIT_UPPER)
 
     def write_position_limit_upper(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_POSITION_LIMIT_UPPER, value)
 
-    def read_position_offset(self, device_id: int) -> float:
+    def read_position_offset(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_POSITION_OFFSET)
 
     def write_position_offset(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_POSITION_OFFSET, value)
 
-    def read_torque_target(self, device_id: int) -> float:
+    def read_torque_target(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_TORQUE_TARGET)
 
     def write_torque_target(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_TORQUE_TARGET, value)
 
-    def read_torque_measured(self, device_id: int) -> float:
+    def read_torque_measured(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_TORQUE_MEASURED)
 
-    def read_velocity_target(self, device_id: int) -> float:
+    def read_velocity_target(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_VELOCITY_TARGET)
 
     def write_velocity_target(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_VELOCITY_TARGET, value)
 
-    def read_velocity_measured(self, device_id: int) -> float:
+    def read_velocity_measured(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_VELOCITY_MEASURED)
 
-    def read_position_target(self, device_id: int) -> float:
+    def read_position_target(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_POSITION_TARGET)
 
     def write_position_target(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_POSITION_TARGET, value)
 
-    def read_position_measured(self, device_id: int) -> float:
+    def read_position_measured(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_POSITION_MEASURED)
 
-    def read_torque_filter_alpha(self, device_id: int) -> float:
+    def read_torque_filter_alpha(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_TORQUE_FILTER_ALPHA)
 
     def write_torque_filter_alpha(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.POSITION_CONTROLLER_TORQUE_FILTER_ALPHA, value)
 
-
-    def read_current_limit(self, device_id: int) -> float:
+    def read_current_limit(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.CURRENT_CONTROLLER_I_LIMIT)
 
     def write_current_limit(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.CURRENT_CONTROLLER_I_LIMIT, value)
 
-    def read_current_kp(self, device_id: int) -> float:
+    def read_current_kp(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.CURRENT_CONTROLLER_I_KP)
 
     def write_current_kp(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.CURRENT_CONTROLLER_I_KP, value)
 
-    def read_current_ki(self, device_id: int) -> float:
+    def read_current_ki(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.CURRENT_CONTROLLER_I_KI)
 
     def write_current_ki(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.CURRENT_CONTROLLER_I_KI, value)
 
-    def read_bus_voltage_filter_alpha(self, device_id: int) -> float:
+    def read_bus_voltage_filter_alpha(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.POWERSTAGE_BUS_VOLTAGE_FILTER_ALPHA)
 
     def write_bus_voltage_filter_alpha(self, device_id: int, value: float):
         self._write_parameter_f32(device_id, Parameter.POWERSTAGE_BUS_VOLTAGE_FILTER_ALPHA, value)
 
-    def read_motor_pole_pairs(self, device_id: int) -> int:
+    def read_motor_pole_pairs(self, device_id: int) -> int | None:
         return self._read_parameter_u32(device_id, Parameter.MOTOR_POLE_PAIRS)
 
     def write_motor_pole_pairs(self, device_id: int, value: int):
         return self._write_parameter_u32(device_id, Parameter.MOTOR_POLE_PAIRS, value)
 
-    def read_motor_torque_constant(self, device_id: int) -> float:
+    def read_motor_torque_constant(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.MOTOR_TORQUE_CONSTANT)
 
     def write_motor_torque_constant(self, device_id: int, value: float):
         return self._write_parameter_f32(device_id, Parameter.MOTOR_TORQUE_CONSTANT, value)
 
-    def read_motor_phase_order(self, device_id: int) -> int:
+    def read_motor_phase_order(self, device_id: int) -> int | None:
         return self._read_parameter_i32(device_id, Parameter.MOTOR_PHASE_ORDER)
 
     def write_motor_phase_order(self, device_id: int, value: int):
         return self._write_parameter_i32(device_id, Parameter.MOTOR_PHASE_ORDER, value)
 
-    def read_motor_calibration_current(self, device_id: int) -> float:
+    def read_motor_calibration_current(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.MOTOR_MAX_CALIBRATION_CURRENT)
 
     def write_motor_calibration_current(self, device_id: int, value: float):
         return self._write_parameter_f32(device_id, Parameter.MOTOR_MAX_CALIBRATION_CURRENT, value)
 
-
-    def read_encoder_cpr(self, device_id: int) -> int:
+    def read_encoder_cpr(self, device_id: int) -> int | None:
         return self._read_parameter_u32(device_id, Parameter.ENCODER_CPR)
 
     def write_encoder_cpr(self, device_id: int, value: int):
         return self._write_parameter_u32(device_id, Parameter.ENCODER_CPR, value)
 
-    def read_encoder_position_offset(self, device_id: int) -> float:
+    def read_encoder_position_offset(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.ENCODER_POSITION_OFFSET)
 
     def write_encoder_position_offset(self, device_id: int, value: float):
         return self._write_parameter_f32(device_id, Parameter.ENCODER_POSITION_OFFSET, value)
 
-    def read_encoder_velocity_filter_alpha(self, device_id: int) -> float:
+    def read_encoder_velocity_filter_alpha(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.ENCODER_VELOCITY_FILTER_ALPHA)
 
     def write_encoder_velocity_filter_alpha(self, device_id: int, value: float):
         return self._write_parameter_f32(device_id, Parameter.ENCODER_VELOCITY_FILTER_ALPHA, value)
 
-    def read_encoder_flux_offset(self, device_id: int) -> float:
+    def read_encoder_flux_offset(self, device_id: int) -> float | None:
         return self._read_parameter_f32(device_id, Parameter.ENCODER_FLUX_OFFSET)
 
     def write_encoder_flux_offset(self, device_id: int, value: float):

@@ -1,3 +1,5 @@
+# Copyright (c) 2025, The Berkeley Humanoid Lite Project Developers.
+
 import time
 import struct
 import threading
@@ -143,6 +145,7 @@ class SamplingRate:
     RATE_SINGLE     = 0x0C
     RATE_NO_RETURN  = 0x0D
 
+
 class Baudrate:
     BAUD_4800       = 0x01
     BAUD_9600       = 0x02
@@ -172,7 +175,7 @@ class SerialImu:
     FRAME_LENGTH = 11
 
     @staticmethod
-    def baud_to_int(baudrate: Baudrate) -> int:
+    def baud_to_int(baudrate: int) -> int:
         match baudrate:
             case Baudrate.BAUD_4800:
                 return 4800
@@ -190,17 +193,18 @@ class SerialImu:
                 return 230400
             case Baudrate.BAUD_460800:
                 return 460800
-            case Baudrate.BAUD_921600:
-                return 921600
+            # case Baudrate.BAUD_921600:
+            #     return 921600
+        return 0
 
-    def __init__(self, port="/dev/ttyUSB0", baudrate=Baudrate.BAUD_115200, read_timeout=4):
+    def __init__(self, port: str = "/dev/ttyUSB0", baudrate: int = Baudrate.BAUD_115200, read_timeout=4):
         self.port: str = port
-        self.baud: Baudrate = baudrate
+        self.baud: int = baudrate
         self.read_timeout: int = read_timeout
 
         baudrate_int = self.baud_to_int(baudrate)
         self.ser: serial.Serial = serial.Serial(self.port, baudrate_int, timeout=self.read_timeout)
-        
+
         print("Serial is Opened:", self.ser.is_open)
 
         self.is_stopped: threading.Event = threading.Event()
@@ -223,8 +227,8 @@ class SerialImu:
         self.quaternion: np.ndarray = np.zeros(4, dtype=np.float32)
 
         # self.__debug_last_time: float = time.perf_counter_ns()
-    
-    def __read_frame(self):
+
+    def __read_frame(self) -> None:
         """
         Parse a frame from the serial port.
         """
@@ -241,52 +245,52 @@ class SerialImu:
             _, year, month, day, hour, minute, second, millisecond = struct.unpack("<BBBBhB", frame)
 
         elif frame_type == FrameType.ACCELERATION:
-            self.acceleration[0] = data1 * 16.0 / 32768.0 # g
-            self.acceleration[1] = data2 * 16.0 / 32768.0 # g
-            self.acceleration[2] = data3 * 16.0 / 32768.0 # g
-            self.temperature = data4 / 100.0 # Celsius
+            self.acceleration[0] = data1 * 16.0 / 32768.0  # g
+            self.acceleration[1] = data2 * 16.0 / 32768.0  # g
+            self.acceleration[2] = data3 * 16.0 / 32768.0  # g
+            self.temperature = data4 / 100.0  # Celsius
 
         elif frame_type == FrameType.ANGULAR_VELOCITY:
-            self.angular_velocity[0] = data1 * 2000.0 / 32768.0 # deg/s
-            self.angular_velocity[1] = data2 * 2000.0 / 32768.0 # deg/s
-            self.angular_velocity[2] = data3 * 2000.0 / 32768.0 # deg/s
+            self.angular_velocity[0] = data1 * 2000.0 / 32768.0  # deg/s
+            self.angular_velocity[1] = data2 * 2000.0 / 32768.0  # deg/s
+            self.angular_velocity[2] = data3 * 2000.0 / 32768.0  # deg/s
 
             # for debugging
             # print(f"frequency: {1.0 / ((time.perf_counter_ns() - self.__debug_last_time) / 1e9)} Hz")
             # self.__debug_last_time = time.perf_counter_ns()
-        
+
         elif frame_type == FrameType.ANGLE:
-            self.angle[0] = data1 * 180.0 / 32768.0 # deg
-            self.angle[1] = data2 * 180.0 / 32768.0 # deg
-            self.angle[2] = data3 * 180.0 / 32768.0 # deg
+            self.angle[0] = data1 * 180.0 / 32768.0  # deg
+            self.angle[1] = data2 * 180.0 / 32768.0  # deg
+            self.angle[2] = data3 * 180.0 / 32768.0  # deg
 
         elif frame_type == FrameType.MAGNETIC_FIELD:
             self.magnetic_field[0] = data1 * 1.0 / 32768.0
             self.magnetic_field[1] = data2 * 1.0 / 32768.0
             self.magnetic_field[2] = data3 * 1.0 / 32768.0
-        
+
         elif frame_type == FrameType.QUATERNION:
             self.quaternion[0] = data1 * 1.0 / 32768.0
             self.quaternion[1] = data2 * 1.0 / 32768.0
             self.quaternion[2] = data3 * 1.0 / 32768.0
             self.quaternion[3] = data4 * 1.0 / 32768.0
 
-    def run(self):
+    def run(self) -> None:
         """
         Start the IMU reading loop.
         """
         self.start_time = time.time()
         while not self.is_stopped.is_set():
             self.__read_frame()
-    
-    def run_forever(self):
+
+    def run_forever(self) -> None:
         """
         Start the IMU reading loop in a separate thread with high priority.
         """
         # self.thread = threading.Thread(target=self.run, daemon=True)
         self.thread = threading.Thread(target=self.run)
         self.thread.start()
-        
+
         # Set thread priority to high
         try:
             import os
@@ -296,13 +300,13 @@ class SerialImu:
         except (ImportError, PermissionError):
             print("Warning: Could not set thread priority. Running with default priority.")
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop the IMU reading loop.
         """
         self.is_stopped.set()
 
-    def unlock(self):
+    def unlock(self) -> None:
         """
         Unlock the IMU to allow configuration changes.
         """
@@ -310,8 +314,8 @@ class SerialImu:
         data = 0xB588
         frame = struct.pack("<BBBH", 0xFF, 0xAA, register_addr, data)
         self.ser.write(frame)
-    
-    def save(self):
+
+    def save(self) -> None:
         """
         Save the configurations permanently.
         """
@@ -319,11 +323,11 @@ class SerialImu:
         data = 0x0000
         frame = struct.pack("<BBBH", 0xFF, 0xAA, register_addr, data)
         self.ser.write(frame)
-    
-    def write_frame(self, register_addr: int, data: int):
+
+    def write_frame(self, register_addr: int, data: int) -> None:
         frame = struct.pack("<BBBH", 0xFF, 0xAA, register_addr, data)
         self.ser.write(frame)
-    
+
     def set_output_content(
         self,
         time: bool = False,
@@ -337,9 +341,9 @@ class SerialImu:
         velocity: bool = False,
         quaternion: bool = False,
         gps_position_accuracy: bool = False,
-    ) -> int:
+    ) -> None:
         """Set the output content configuration for the IMU.
-        
+
         Args:
             time: Enable time output
             acceleration: Enable acceleration output
@@ -352,7 +356,7 @@ class SerialImu:
             velocity: Enable velocity output
             quaternion: Enable quaternion output
             gps_position_accuracy: Enable GPS position accuracy output
-            
+
         Returns:
             int: The output content configuration value where each bit represents
                  whether that particular data type should be included in the output.
@@ -376,13 +380,13 @@ class SerialImu:
         output_content |= (gps_position_accuracy << 10)
 
         self.write_frame(ImuRegisters.RSW, output_content)
-    
-    def set_sampling_rate(self, rate: SamplingRate):
+
+    def set_sampling_rate(self, rate: int) -> None:
         self.write_frame(ImuRegisters.RRATE, rate)
 
-    def set_baudrate(self, baudrate: Baudrate):
+    def set_baudrate(self, baudrate: int) -> None:
         self.baud = baudrate
-        
+
         # wait for the unlock to be set
         time.sleep(0.1)
         self.write_frame(ImuRegisters.BAUD, baudrate)
@@ -404,7 +408,7 @@ if __name__ == "__main__":
     # imu.set_baudrate(Baudrate.BAUD_115200)
     # time.sleep(0.1)
     # imu.save()
-    
+
     # set sampling rate:
     # imu.unlock()
     # imu.set_sampling_rate(SamplingRate.RATE_200_HZ)

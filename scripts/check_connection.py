@@ -1,9 +1,9 @@
 # Copyright (c) 2025, The Berkeley Humanoid Lite Project Developers.
 
-from berkeley_humanoid_lite_lowlevel.robot.robot import Robot
+from berkeley_humanoid_lite_lowlevel.robot import Humanoid
 
 
-robot = Robot()
+robot = Humanoid()
 
 robot.check_connection()
 

@@ -2,7 +2,7 @@
 
 import time
 
-from omegaconf import DictConfig, ListConfig, OmegaConf
+from omegaconf import OmegaConf
 import numpy as np
 
 import berkeley_humanoid_lite_lowlevel.recoil as recoil
@@ -23,41 +23,43 @@ def linear_interpolate(start: np.ndarray, end: np.ndarray, percentage: float) ->
     return target
 
 
-class Robot:
+class Humanoid:
     def __init__(self):
 
-        # self.left_arm_transport = recoil.SocketCANTransport("can0")
-        # self.right_arm_transport = recoil.SocketCANTransport("can1")
+        # self.left_arm_transport = recoil.Bus("can0")
+        # self.right_arm_transport = recoil.Bus("can1")
+        # self.left_leg_transport = recoil.Bus("can2")
+        # self.right_leg_transport = recoil.Bus("can3")
 
         self.left_leg_transport = recoil.Bus("can0")
         self.right_leg_transport = recoil.Bus("can1")
 
         self.joints = [
-            # ["left_shoulder_pitch_joint", recoil.MotorController(self.left_arm_transport, 1)],
-            # ["left_shoulder_roll_joint", recoil.MotorController(self.left_arm_transport, 3)],
-            # ["left_shoulder_yaw_joint", recoil.MotorController(self.left_arm_transport, 5)],
-            # ["left_elbow_joint", recoil.MotorController(self.left_arm_transport, 7)],
-            # ["left_wrist_yaw_joint", recoil.MotorController(self.left_arm_transport, 9)],
+            # (self.left_arm_transport,   1,  "left_shoulder_pitch_joint"     ),  # noqa: E241
+            # (self.left_arm_transport,   3,  "left_shoulder_roll_joint"      ),  # noqa: E241
+            # (self.left_arm_transport,   5,  "left_shoulder_yaw_joint"       ),  # noqa: E241
+            # (self.left_arm_transport,   7,  "left_elbow_pitch_joint"        ),  # noqa: E241
+            # (self.left_arm_transport,   9,  "left_wrist_yaw_joint"          ),  # noqa: E241
 
-            # ["right_shoulder_pitch_joint", recoil.MotorController(self.right_arm_transport, 2)],
-            # ["right_shoulder_roll_joint", recoil.MotorController(self.right_arm_transport, 4)],
-            # ["right_shoulder_yaw_joint", recoil.MotorController(self.right_arm_transport, 6)],
-            # ["right_elbow_joint", recoil.MotorController(self.right_arm_transport, 8)],
-            # ["right_wrist_yaw_joint", recoil.MotorController(self.right_arm_transport, 10)],
+            # (self.right_arm_transport,  2,  "right_shoulder_pitch_joint"    ),  # noqa: E241
+            # (self.right_arm_transport,  4,  "right_shoulder_roll_joint"     ),  # noqa: E241
+            # (self.right_arm_transport,  6,  "right_shoulder_yaw_joint"      ),  # noqa: E241
+            # (self.right_arm_transport,  8,  "right_elbow_pitch_joint"       ),  # noqa: E241
+            # (self.right_arm_transport,  10, "right_wrist_yaw_joint"         ),  # noqa: E241
 
-            (self.left_leg_transport,   1,  "left_hip_roll_joint"       ),
-            (self.left_leg_transport,   3,  "left_hip_yaw_joint"        ),
-            (self.left_leg_transport,   5,  "left_hip_pitch_joint"      ),
-            (self.left_leg_transport,   7,  "left_knee_pitch_joint"     ),
-            (self.left_leg_transport,   11, "left_ankle_pitch_joint"    ),
-            (self.left_leg_transport,   13, "left_ankle_roll_joint"     ),
+            (self.left_leg_transport,   1,  "left_hip_roll_joint"           ),  # noqa: E241
+            (self.left_leg_transport,   3,  "left_hip_yaw_joint"            ),  # noqa: E241
+            (self.left_leg_transport,   5,  "left_hip_pitch_joint"          ),  # noqa: E241
+            (self.left_leg_transport,   7,  "left_knee_pitch_joint"         ),  # noqa: E241
+            (self.left_leg_transport,   11, "left_ankle_pitch_joint"        ),  # noqa: E241
+            (self.left_leg_transport,   13, "left_ankle_roll_joint"         ),  # noqa: E241
 
-            (self.right_leg_transport,  2,  "right_hip_roll_joint"      ),
-            (self.right_leg_transport,  4,  "right_hip_yaw_joint"       ),
-            (self.right_leg_transport,  6,  "right_hip_pitch_joint"     ),
-            (self.right_leg_transport,  8,  "right_knee_pitch_joint"    ),
-            (self.right_leg_transport,  12, "right_ankle_pitch_joint"   ),
-            (self.right_leg_transport,  14, "right_ankle_roll_joint"    ),
+            (self.right_leg_transport,  2,  "right_hip_roll_joint"          ),  # noqa: E241
+            (self.right_leg_transport,  4,  "right_hip_yaw_joint"           ),  # noqa: E241
+            (self.right_leg_transport,  6,  "right_hip_pitch_joint"         ),  # noqa: E241
+            (self.right_leg_transport,  8,  "right_knee_pitch_joint"        ),  # noqa: E241
+            (self.right_leg_transport,  12, "right_ankle_pitch_joint"       ),  # noqa: E241
+            (self.right_leg_transport,  14, "right_ankle_roll_joint"        ),  # noqa: E241
         ]
 
         self.imu = SerialImu(baudrate=Baudrate.BAUD_460800)
@@ -116,8 +118,7 @@ class Robot:
         assert position_offsets.shape[0] == len(self.joints)
         self.position_offsets[:] = position_offsets
 
-
-    def run(self):
+    def enter_damping(self):
         self.joint_kp = np.zeros((len(self.joints),), dtype=np.float32)
         self.joint_kd = np.zeros((len(self.joints),), dtype=np.float32)
         self.torque_limit = np.zeros((len(self.joints),), dtype=np.float32)

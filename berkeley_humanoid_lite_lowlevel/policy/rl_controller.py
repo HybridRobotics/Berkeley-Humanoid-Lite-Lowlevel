@@ -30,6 +30,11 @@ class Policy(ABC):
 
 
 class TorchPolicy(Policy):
+    """
+    PyTorch policy inference runner.
+
+    Loads and executes PyTorch models for robot control policies.
+    """
     def __init__(self, checkpoint_path: str, device: str = "cpu"):
         self.device = device
         self.model: torch.nn.Module = torch.load(checkpoint_path, map_location=self.device)
@@ -42,6 +47,11 @@ class TorchPolicy(Policy):
 
 
 class OnnxPolicy(Policy):
+    """
+    ONNX policy inference runner
+
+    Loads and executes ONNX models for robot control policies.
+    """
     def __init__(self, checkpoint_path: str):
         self.model: ort.InferenceSession = ort.InferenceSession(checkpoint_path)
 
@@ -54,7 +64,7 @@ class OnnxPolicy(Policy):
             self.key = "onnx::Gemm_0"
 
     def forward(self, observations: np.ndarray) -> np.ndarray:
-        return self.model.run(None, {self.key: observations})[0]
+        return np.array(self.model.run(None, {self.key: observations})[0])
 
 
 class RlController:
@@ -153,13 +163,8 @@ class RlController:
         robot_base_ang_vel = robot_observations[4:7]
         robot_joint_pos = robot_observations[7:7 + self.cfg.num_actions] - self.default_joint_positions
         robot_joint_vel = robot_observations[7 + self.cfg.num_actions:7 + self.cfg.num_actions * 2]
-        robot_mode = robot_observations[7 + self.cfg.num_actions * 2]
+        # robot_mode = robot_observations[7 + self.cfg.num_actions * 2]
         command_velocity = robot_observations[7 + self.cfg.num_actions * 2 + 1:7 + self.cfg.num_actions * 2 + 4]
-
-        # # Skip if not in RL running mode
-        # if robot_mode != 3:
-        #     print(f"Mode is not 3, skipping: {robot_mode}")
-        #     return None
 
         # Process observations
         base_ang_vel = robot_base_ang_vel

@@ -1,14 +1,9 @@
 # Copyright (c) 2025, The Berkeley Humanoid Lite Project Developers.
 
-import argparse
-from typing import Union
-
-import numpy as np
 from cc.udp import UDP
-from omegaconf import DictConfig, ListConfig, OmegaConf
 from loop_rate_limiters import RateLimiter
 
-from berkeley_humanoid_lite_lowlevel.robot.robot import Robot
+from berkeley_humanoid_lite_lowlevel.robot import Humanoid
 from berkeley_humanoid_lite_lowlevel.policy.rl_controller import RlController
 from berkeley_humanoid_lite_lowlevel.policy.config import Cfg
 
@@ -27,8 +22,9 @@ controller.load_policy()
 
 rate = RateLimiter(1 / cfg.policy_dt)
 
-robot = Robot()
-robot.run()
+robot = Humanoid()
+
+robot.enter_damping()
 
 obs = robot.reset()
 
