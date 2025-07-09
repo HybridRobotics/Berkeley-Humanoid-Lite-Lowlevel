@@ -111,86 +111,10 @@ class Se2Gamepad:
             mode_switch = 2
 
         # Enter idle mode (B or Left/Right Thumbstick)
-        if self._states.get(XInputEntry.BTN_B) or self._states.get(XInputEntry.BTN_THUMB_L) or self._states.get(XInputEntry.BTN_THUMB_R):
+        if self._states.get(XInputEntry.BTN_X) or self._states.get(XInputEntry.BTN_THUMB_L) or self._states.get(XInputEntry.BTN_THUMB_R):
             mode_switch = 1
 
         self.commands["mode_switch"] = mode_switch
-
-# try:
-#     from pynput import keyboard
-#     from pynput.keyboard import Key
-
-#     class UdpKeyboard(UdpController):
-#         def __init__(self,
-#                      publish_address: str = "172.28.0.255",
-#                      publish_port: int = 10011,
-#                      publish_frequency: float = 20
-#                      ) -> None:
-#             super().__init__(publish_address, publish_port, publish_frequency)
-
-#             self.ctrl_pressed = False
-
-#         def _on_key_press(self, key: Optional[Union[keyboard.Key, keyboard.KeyCode]]) -> None:
-#             """
-#             Handle key press events.
-
-#             Args:
-#                 key: The key that was pressed
-#             """
-#             if key is None:
-#                 return
-
-#             if not hasattr(key, "char"):
-#                 match key:
-#                     case Key.ctrl:
-#                         self.ctrl_pressed = True
-#                     case Key.space:
-#                         # request to switch to idle mode
-#                         self.commands["mode_switch"] = 1
-#                     case Key.up:
-#                         self.commands["velocity_x"] += 0.1
-#                     case Key.down:
-#                         self.commands["velocity_x"] -= 0.1
-#                     case Key.left:
-#                         self.commands["velocity_yaw"] += 0.1
-#                     case Key.right:
-#                         self.commands["velocity_yaw"] -= 0.1
-#                     case Key.end:
-#                         self.commands["velocity_x"] = 0.0
-#                         self.commands["velocity_y"] = 0.0
-#                         self.commands["velocity_yaw"] = 0.0
-#                 return
-
-#             if type(key) == keyboard.KeyCode:
-#                 if key.char == "2" and self.ctrl_pressed:
-#                     # request to switch to rl control mode
-#                     self.commands["mode_switch"] = 3
-#                 if key.char == "1" and self.ctrl_pressed:
-#                     # request to switch to init mode
-#                     self.commands["mode_switch"] = 2
-
-#         def _on_key_release(self, key: keyboard.Key | keyboard.KeyCode | None) -> None:
-#             if key is None:
-#                 return
-
-#             if not hasattr(key, "char"):
-#                 match key:
-#                     case Key.ctrl:
-#                         self.ctrl_pressed = False
-#                     case Key.space:
-#                         self.commands["mode_switch"] = 0
-#                 return
-
-#             if type(key) == keyboard.KeyCode:
-#                 if key.char == "1" or key.char == "2":
-#                     self.commands["mode_switch"] = 0
-
-#         def _start_controller(self) -> None:
-#             self.listener = keyboard.Listener(on_press=self._on_key_press, on_release=self._on_key_release)
-#             self.listener.start()
-
-# except ImportError:
-#     print("pynput not found, probably on robot computer.")
 
 
 if __name__ == "__main__":

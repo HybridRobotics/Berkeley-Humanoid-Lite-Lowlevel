@@ -115,7 +115,7 @@ void RealHumanoid::control_loop() {
 
     case STATE_RL_RUNNING:
       /* In this state, the robot will follow the policy */
-      for (int i = 0; i < N_JOINTS; i += 1) {
+      for (int i = 0; i < N_LOWLEVEL_COMMANDS; i += 1) {
         position_target[i] = lowlevel_commands[i];
       }
 
