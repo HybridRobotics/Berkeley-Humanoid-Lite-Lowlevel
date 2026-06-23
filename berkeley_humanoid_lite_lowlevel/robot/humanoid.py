@@ -26,26 +26,26 @@ def linear_interpolate(start: np.ndarray, end: np.ndarray, percentage: float) ->
 class Humanoid:
     def __init__(self):
 
-        # self.left_arm_transport = recoil.Bus("can0")
-        # self.right_arm_transport = recoil.Bus("can1")
-        # self.left_leg_transport = recoil.Bus("can2")
-        # self.right_leg_transport = recoil.Bus("can3")
+        self.left_arm_transport = recoil.Bus("can0")
+        self.right_arm_transport = recoil.Bus("can1")
+        self.left_leg_transport = recoil.Bus("can2")
+        self.right_leg_transport = recoil.Bus("can3")
 
-        self.left_leg_transport = recoil.Bus("can0")
-        self.right_leg_transport = recoil.Bus("can1")
+        # self.left_leg_transport = recoil.Bus("can0")
+        # self.right_leg_transport = recoil.Bus("can1")
 
         self.joints = [
-            # (self.left_arm_transport,   1,  "left_shoulder_pitch_joint"     ),  # noqa: E241
-            # (self.left_arm_transport,   3,  "left_shoulder_roll_joint"      ),  # noqa: E241
-            # (self.left_arm_transport,   5,  "left_shoulder_yaw_joint"       ),  # noqa: E241
-            # (self.left_arm_transport,   7,  "left_elbow_pitch_joint"        ),  # noqa: E241
-            # (self.left_arm_transport,   9,  "left_wrist_yaw_joint"          ),  # noqa: E241
+            (self.left_arm_transport,   1,  "left_shoulder_pitch_joint"     ),  # noqa: E241
+            (self.left_arm_transport,   3,  "left_shoulder_roll_joint"      ),  # noqa: E241
+            (self.left_arm_transport,   5,  "left_shoulder_yaw_joint"       ),  # noqa: E241
+            (self.left_arm_transport,   7,  "left_elbow_pitch_joint"        ),  # noqa: E241
+            (self.left_arm_transport,   9,  "left_wrist_yaw_joint"          ),  # noqa: E241
 
-            # (self.right_arm_transport,  2,  "right_shoulder_pitch_joint"    ),  # noqa: E241
-            # (self.right_arm_transport,  4,  "right_shoulder_roll_joint"     ),  # noqa: E241
-            # (self.right_arm_transport,  6,  "right_shoulder_yaw_joint"      ),  # noqa: E241
-            # (self.right_arm_transport,  8,  "right_elbow_pitch_joint"       ),  # noqa: E241
-            # (self.right_arm_transport,  10, "right_wrist_yaw_joint"         ),  # noqa: E241
+            (self.right_arm_transport,  2,  "right_shoulder_pitch_joint"    ),  # noqa: E241
+            (self.right_arm_transport,  4,  "right_shoulder_roll_joint"     ),  # noqa: E241
+            (self.right_arm_transport,  6,  "right_shoulder_yaw_joint"      ),  # noqa: E241
+            (self.right_arm_transport,  8,  "right_elbow_pitch_joint"       ),  # noqa: E241
+            (self.right_arm_transport,  10, "right_wrist_yaw_joint"         ),  # noqa: E241
 
             (self.left_leg_transport,   1,  "left_hip_roll_joint"           ),  # noqa: E241
             (self.left_leg_transport,   3,  "left_hip_yaw_joint"            ),  # noqa: E241
