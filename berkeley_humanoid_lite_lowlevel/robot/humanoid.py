@@ -24,7 +24,7 @@ def linear_interpolate(start: np.ndarray, end: np.ndarray, percentage: float) ->
 
 
 class Humanoid:
-    def __init__(self):
+    def __init__(self, use_imu: bool = True, use_gamepad: bool = True, load_calibration: bool = True):
 
         self.left_arm_transport = recoil.Bus("can0")
         self.right_arm_transport = recoil.Bus("can1")
@@ -62,12 +62,15 @@ class Humanoid:
             (self.right_leg_transport,  14, "right_ankle_roll_joint"        ),  # noqa: E241
         ]
 
-        self.imu = SerialImu(baudrate=Baudrate.BAUD_460800)
-        self.imu.run_forever()
+        self.imu = None
+        if use_imu:
+            self.imu = SerialImu(baudrate=Baudrate.BAUD_460800)
+            self.imu.run_forever()
 
-        # Start joystick thread
-        self.command_controller = Se2Gamepad()
-        self.command_controller.run()
+        self.command_controller = None
+        if use_gamepad:
+            self.command_controller = Se2Gamepad()
+            self.command_controller.run()
 
         self.state = State.IDLE
         self.next_state = State.IDLE
@@ -111,12 +114,13 @@ class Humanoid:
         self.init_percentage = 0.0
         self.starting_positions = np.zeros_like(self.joint_position_target, dtype=np.float32)
 
-        config_path = "calibration.yaml"
-        with open(config_path, "r") as f:
-            config = OmegaConf.load(f)
-        position_offsets = np.array(config.get("position_offsets", None))
-        assert position_offsets.shape[0] == len(self.joints)
-        self.position_offsets[:] = position_offsets
+        if load_calibration:
+            config_path = "calibration.yaml"
+            with open(config_path, "r") as f:
+                config = OmegaConf.load(f)
+            position_offsets = np.array(config.get("position_offsets", None))
+            assert position_offsets.shape[0] == len(self.joints)
+            self.position_offsets[:] = position_offsets
 
     def enter_damping(self):
         self.joint_kp = np.zeros((len(self.joints),), dtype=np.float32)
@@ -148,8 +152,10 @@ class Humanoid:
         print("Motors enabled")
 
     def stop(self):
-        self.imu.stop()
-        self.command_controller.stop()
+        if self.imu is not None:
+            self.imu.stop()
+        if self.command_controller is not None:
+            self.command_controller.stop()
 
         for entry in self.joints:
             bus, device_id, _ = entry
@@ -180,20 +186,22 @@ class Humanoid:
         mode = self.lowlevel_states[31:32]
         velocity_commands = self.lowlevel_states[32:35]
 
-        imu_quaternion[:] = self.imu.quaternion[:]
+        if self.imu is not None:
+            imu_quaternion[:] = self.imu.quaternion[:]
 
-        # IMU returns angular velocity in deg/s, we need rad/s
-        imu_angular_velocity[:] = np.deg2rad(self.imu.angular_velocity[:])
+            # IMU returns angular velocity in deg/s, we need rad/s
+            imu_angular_velocity[:] = np.deg2rad(self.imu.angular_velocity[:])
 
         joint_positions[:] = self.joint_position_measured[:]
         joint_velocities[:] = self.joint_velocity_measured[:]
 
-        mode[0] = self.command_controller.commands["mode_switch"]
-        velocity_commands[0] = self.command_controller.commands["velocity_x"]
-        velocity_commands[1] = self.command_controller.commands["velocity_y"]
-        velocity_commands[2] = self.command_controller.commands["velocity_yaw"]
+        if self.command_controller is not None:
+            mode[0] = self.command_controller.commands["mode_switch"]
+            velocity_commands[0] = self.command_controller.commands["velocity_x"]
+            velocity_commands[1] = self.command_controller.commands["velocity_y"]
+            velocity_commands[2] = self.command_controller.commands["velocity_yaw"]
 
-        self.next_state = self.command_controller.commands["mode_switch"]
+            self.next_state = self.command_controller.commands["mode_switch"]
 
         return self.lowlevel_states
 
