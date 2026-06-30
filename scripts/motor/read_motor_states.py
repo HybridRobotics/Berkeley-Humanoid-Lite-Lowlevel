@@ -35,23 +35,21 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--channel", default="can0", help="CAN channel to use with --ids")
     parser.add_argument("-i", "--ids", nargs="+", type=int, help="read these motor IDs on --channel")
-    parser.add_argument("--timeout", type=float, default=0.1, help="read timeout per value in seconds")
-    parser.add_argument("--interval", type=float, default=0.5, help="delay between read loops in seconds")
+    parser.add_argument("--interval", type=float, default=0.1, help="delay between read loops in seconds")
+    parser.add_argument("--seed-timeout", type=float, default=0.1, help="initial SDO read timeout in seconds")
     return parser.parse_args()
 
 
-def read_state(recoil, bus, device_id, timeout):
-    position = bus._read_parameter_f32(
+def seed_target_position(recoil, bus, device_id, timeout):
+    return bus._read_parameter_f32(
         device_id,
         recoil.Parameter.POSITION_CONTROLLER_POSITION_MEASURED,
         timeout=timeout,
     )
-    velocity = bus._read_parameter_f32(
-        device_id,
-        recoil.Parameter.POSITION_CONTROLLER_VELOCITY_MEASURED,
-        timeout=timeout,
-    )
-    return position, velocity
+
+
+def read_state(bus, device_id, target_position):
+    return bus.write_read_pdo_2(device_id, target_position, 0.0)
 
 
 def main():
@@ -61,16 +59,25 @@ def main():
     import berkeley_humanoid_lite_lowlevel.recoil as recoil
 
     buses = {}
+    target_positions = {}
     try:
         while True:
             for channel, device_id, name in joints:
                 if channel not in buses:
                     buses[channel] = recoil.Bus(channel=channel, bitrate=1000000)
 
-                position, velocity = read_state(recoil, buses[channel], device_id, args.timeout)
+                key = (channel, device_id)
+                if key not in target_positions:
+                    target_positions[key] = seed_target_position(recoil, buses[channel], device_id, args.seed_timeout)
+                if target_positions[key] is None:
+                    position, velocity = None, None
+                else:
+                    position, velocity = read_state(buses[channel], device_id, target_positions[key])
+
                 if position is None or velocity is None:
                     print(f"{channel}:{device_id:<2} {name:<32} position: ---      velocity: ---")
                 else:
+                    target_positions[key] = position
                     print(f"{channel}:{device_id:<2} {name:<32} position: {position: .6f}  velocity: {velocity: .6f}")
 
             print()
