@@ -32,8 +32,8 @@ JOINTS = [
 ]
 
 JOINT_AXIS_DIRECTIONS = np.array([
-    -1, +1, -1,
-    -1,
+    +1, +1, -1,
+    +1,
     -1, +1,
     -1, +1, +1,
     +1,
@@ -65,7 +65,7 @@ LIMIT_DIRECTIONS = [
     "min", "max",
 ]
 
-CALIBRATION_PATH = Path("calibration.yaml")
+CALIBRATION_PATH = Path(__file__).resolve().parents[1] / "calibration.yaml"
 
 
 def get_args():

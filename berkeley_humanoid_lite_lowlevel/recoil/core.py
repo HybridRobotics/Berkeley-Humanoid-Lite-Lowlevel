@@ -582,11 +582,14 @@ class Bus:
         ))
 
     def receive_pdo_2(self, device_id: int) -> tuple:
-        rx_frame = self.receive(filter_device_id=device_id, timeout=0.001)
+        rx_frame = self.receive(filter_device_id=device_id, filter_function=Function.TRANSMIT_PDO_2, timeout=0.001)
 
-        if rx_frame:
-            measured_position, measured_velocity = struct.unpack("<ff", rx_frame.data[0:8])
-            return measured_position, measured_velocity
-        else:
+        if not rx_frame:
             print(f"ERROR: <{self.channel}> No response from device {device_id}, timeout")
             return None, None
+        if rx_frame.size < 8:
+            print(f"ERROR: <{self.channel}> Short PDO2 response from device {device_id}: {rx_frame.size} bytes")
+            return None, None
+
+        measured_position, measured_velocity = struct.unpack("<ff", rx_frame.data[0:8])
+        return measured_position, measured_velocity
